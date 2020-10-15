@@ -25,7 +25,7 @@ import {
   languages,
   MarkerSeverity
 } from 'monaco-editor/esm/vs/editor/editor.api'
-import React, { useEffect, useRef } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 import { withBus } from 'react-suber'
 import { Bus } from 'suber'
 import { NEO4J_BROWSER_USER_ACTION_QUERY } from 'services/bolt/txMetadata'
@@ -63,6 +63,29 @@ const Monaco = ({
 }: MonacoProps): JSX.Element => {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoId = `monaco-${id}`
+
+  // Share current text with parent and add warnings
+  const updateCode = () => {
+    const text =
+      editorRef.current
+        ?.getModel()
+        ?.getLinesContent()
+        .join('\n') || ''
+
+    onChange(text)
+    addWarnings(parse(text).referencesListener.queriesAndCommands)
+  }
+
+  const debouncedUpdateCode = debounce(updateCode, 300)
+
+  const onContentUpdate = useCallback(() => {
+    editor.setModelMarkers(
+      editorRef.current?.getModel() as editor.ITextModel,
+      monacoId,
+      []
+    )
+    debouncedUpdateCode()
+  }, [debouncedUpdateCode, monacoId])
 
   // Create monaco instance, listen to text changes and destroy
   useEffect(() => {
@@ -105,7 +128,7 @@ const Monaco = ({
     return () => {
       editorRef.current?.dispose()
     }
-  }, [])
+  }, [monacoId, onContentUpdate, value])
 
   // Update theme when setting is changed
   useEffect(() => {
@@ -115,31 +138,7 @@ const Monaco = ({
   // Trigger update when multi statement setting is changed to update warnings
   useEffect(() => {
     onContentUpdate()
-  }, [enableMultiStatementMode])
-
-  // Share current text with parent and add warnings
-  const updateCode = () => {
-    const text =
-      editorRef.current
-        ?.getModel()
-        ?.getLinesContent()
-        .join('\n') || ''
-
-    onChange(text)
-    addWarnings(parse(text).referencesListener.queriesAndCommands)
-  }
-
-  const debouncedUpdateCode = debounce(updateCode, 300)
-
-  // On each text change, clear warnings and reset countdown to adding warnings
-  const onContentUpdate = () => {
-    editor.setModelMarkers(
-      editorRef.current?.getModel() as editor.ITextModel,
-      monacoId,
-      []
-    )
-    debouncedUpdateCode()
-  }
+  }, [enableMultiStatementMode, onContentUpdate])
 
   const addWarnings = (
     statements: { start: { line: number }; getText: () => string }[]

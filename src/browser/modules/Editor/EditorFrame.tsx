@@ -18,7 +18,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import React, { useState, Dispatch, useEffect, useRef } from 'react'
+import React, {
+  useState,
+  Dispatch,
+  useEffect,
+  useRef,
+  useCallback
+} from 'react'
 import { Action } from 'redux'
 import SVGInline from 'react-svg-inline'
 import { connect } from 'react-redux'
@@ -105,11 +111,15 @@ export function EditorFrame({
   )
   const editorRef = useRef<CodeEditor>(null)
 
-  function toggleFullscreen() {
-    setFullscreen(!isFullscreen)
-  }
+  const toggleFullscreen = useCallback(() => setFullscreen(!isFullscreen), [
+    isFullscreen
+  ])
 
-  useEffect(() => bus && bus.take(EXPAND, toggleFullscreen), [isFullscreen])
+  useEffect(() => bus && bus.take(EXPAND, toggleFullscreen), [
+    bus,
+    isFullscreen,
+    toggleFullscreen
+  ])
   useEffect(
     () =>
       bus &&
@@ -119,7 +129,7 @@ export function EditorFrame({
           editorRef.current?.setValue('')
         }
       }),
-    [currentlyEditing]
+    [bus, currentlyEditing]
   )
   useEffect(
     () =>
@@ -130,7 +140,7 @@ export function EditorFrame({
           editorRef.current?.setValue('')
         }
       }),
-    [currentlyEditing]
+    [bus, currentlyEditing]
   )
 
   useEffect(
@@ -151,7 +161,7 @@ export function EditorFrame({
           editorRef.current?.setValue(message)
         }
       ),
-    []
+    [bus]
   )
 
   useEffect(
@@ -162,7 +172,7 @@ export function EditorFrame({
         setCurrentlyEditing(null)
         editorRef.current?.setValue(message)
       }),
-    []
+    [bus]
   )
 
   function discardEditor() {
