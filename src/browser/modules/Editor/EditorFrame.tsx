@@ -117,7 +117,6 @@ export function EditorFrame({
 
   useEffect(() => bus && bus.take(EXPAND, toggleFullscreen), [
     bus,
-    isFullscreen,
     toggleFullscreen
   ])
   useEffect(

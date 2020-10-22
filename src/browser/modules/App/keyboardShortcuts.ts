@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect } from 'react'
 import { FOCUS, EXPAND } from 'shared/modules/editor/editorDuck'
 import { Bus } from 'suber'
 
@@ -58,48 +58,34 @@ function isOutsideTextArea(e: KeyboardEvent): boolean {
   return ['INPUT', 'TEXTAREA'].indexOf(tagName) === -1
 }
 
+function useKeydownListener(shortcut: (e: KeyboardEvent) => void): void {
+  return useEffect(() => {
+    document.addEventListener('keydown', shortcut)
+
+    return (): void => document.removeEventListener('keydown', shortcut)
+  })
+}
+
 export function useKeyboardShortcuts(bus: Bus): void {
   const trigger = useCallback(
     (msg: string): void => bus && bus.send(msg, null),
     [bus]
   )
 
-  const focusEditorOnSlash = useCallback(
-    (e: KeyboardEvent): void => {
-      if (isOutsideTextArea(e) && matchesShortcut(e, FOCUS_SHORTCUT)) {
-        e.preventDefault()
-        trigger(FOCUS)
-      }
-    },
-    [trigger]
-  )
+  useKeydownListener((e: KeyboardEvent): void => {
+    if (isOutsideTextArea(e) && matchesShortcut(e, FOCUS_SHORTCUT)) {
+      e.preventDefault()
+      trigger(FOCUS)
+    }
+  })
 
-  const fullscreenEditor = useCallback(
-    (e: KeyboardEvent): void => {
-      if (
-        matchesShortcut(e, FULLSCREEN_SHORTCUT) ||
-        matchesShortcut(e, OLD_FULLSCREEN_SHORTCUT)
-      ) {
-        e.preventDefault()
-        trigger(EXPAND)
-      }
-    },
-    [trigger]
-  )
-
-  const keyboardShortcuts = useMemo(
-    () => [focusEditorOnSlash, fullscreenEditor],
-    [focusEditorOnSlash, fullscreenEditor]
-  )
-
-  useEffect(() => {
-    keyboardShortcuts.forEach(shortcut =>
-      document.addEventListener('keydown', shortcut)
-    )
-
-    return (): void =>
-      keyboardShortcuts.forEach(shortcut =>
-        document.removeEventListener('keydown', shortcut)
-      )
-  }, [keyboardShortcuts])
+  useKeydownListener((e: KeyboardEvent): void => {
+    if (
+      matchesShortcut(e, FULLSCREEN_SHORTCUT) ||
+      matchesShortcut(e, OLD_FULLSCREEN_SHORTCUT)
+    ) {
+      e.preventDefault()
+      trigger(EXPAND)
+    }
+  })
 }
